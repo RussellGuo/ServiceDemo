@@ -23,10 +23,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "ServiceDemo";
 
     private Thread mRunThread = null;
-    // Used to load the 'native-lib' library on application startup.
-    static {
-        System.loadLibrary("native-lib");
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,16 +42,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Example of a call to a native method
         TextView tv = (TextView) findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
+        tv.setText("Have to say something");
         mRunThread = new Thread(new Runnable() {
             public void run() {
-                //RunIt();
                 for (;;) {
-                    int inputSource = InputDevice.SOURCE_TOUCHSCREEN;
-                    float x = 600;
-                    float y = 600;
-                    sendTap(inputSource, x, y);
-
+                    sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, 200, 200, 60, 60, 300);
                     SystemClock.sleep(10000);
                 }
 
@@ -91,6 +82,27 @@ public class MainActivity extends AppCompatActivity {
         injectMotionEvent(inputSource, MotionEvent.ACTION_UP, now, x, y, 0.0f);
     }
 
+    private void sendSwipe(int inputSource, float x1, float y1, float x2, float y2, int duration) {
+        if (duration < 0) {
+            duration = 300;
+        }
+        long now = SystemClock.uptimeMillis();
+        injectMotionEvent(inputSource, MotionEvent.ACTION_DOWN, now, x1, y1, 1.0f);
+        long startTime = now;
+        long endTime = startTime + duration;
+        while (now < endTime) {
+            long elapsedTime = now - startTime;
+            float alpha = (float) elapsedTime / duration;
+            injectMotionEvent(inputSource, MotionEvent.ACTION_MOVE, now, lerp(x1, x2, alpha),
+                    lerp(y1, y2, alpha), 1.0f);
+            now = SystemClock.uptimeMillis();
+        }
+        injectMotionEvent(inputSource, MotionEvent.ACTION_UP, now, x2, y2, 0.0f);
+    }
+
+    private static final float lerp(float a, float b, float alpha) {
+        return (b - a) * alpha + a;
+    }
     /**
      * Builds a MotionEvent and injects it into the event stream.
      *
@@ -123,11 +135,4 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
-    public native void RunIt();
 }
