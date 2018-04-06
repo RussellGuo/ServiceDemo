@@ -46,14 +46,21 @@ public class MainActivity extends AppCompatActivity {
         mRunThread = new Thread(new Runnable() {
             public void run() {
                 Random r = new Random();
+                long startTime = SystemClock.elapsedRealtime();
                 for (;;) {
-                    long v = (long)(r.nextGaussian() * 3000 + 10000);
+                    double v = (r.nextGaussian() * 16000 + 40000);
                     if (v <= 10) {
                         v = 10;
+                    } else if (v > 200000) {
+                        v = 200000;
                     }
                     sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, 600, 600, 20, 200, 300);
-                    Log.d(TAG, String.format("delay time %d", v));
-                    SystemClock.sleep(v);
+                    Log.d(TAG, String.format("delay time %f", v));
+                    SystemClock.sleep((long)v*5);
+                    long current = SystemClock.elapsedRealtime();
+                    if (current - startTime > 90L * 60 * 1000) { // 1.5 hours
+                        break;
+                    }
                 }
 
             }
