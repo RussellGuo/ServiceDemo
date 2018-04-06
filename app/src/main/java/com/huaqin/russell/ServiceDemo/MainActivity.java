@@ -14,10 +14,10 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import android.hardware.input.InputManager;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "ServiceDemo";
@@ -45,9 +45,15 @@ public class MainActivity extends AppCompatActivity {
         tv.setText("Have to say something");
         mRunThread = new Thread(new Runnable() {
             public void run() {
+                Random r = new Random();
                 for (;;) {
-                    sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, 200, 200, 60, 60, 300);
-                    SystemClock.sleep(10000);
+                    long v = (long)(r.nextGaussian() * 3000 + 10000);
+                    if (v <= 10) {
+                        v = 10;
+                    }
+                    sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, 600, 600, 20, 200, 300);
+                    Log.d(TAG, String.format("delay time %d", v));
+                    SystemClock.sleep(v);
                 }
 
             }
@@ -103,6 +109,34 @@ public class MainActivity extends AppCompatActivity {
     private static final float lerp(float a, float b, float alpha) {
         return (b - a) * alpha + a;
     }
+
+    class InjectInputEventCaller {
+        private Object InputManagerObj = null;
+        private Method injectInputEvent = null;
+        InjectInputEventCaller() {
+            try {
+                Class clazz = ClassLoader.getSystemClassLoader().loadClass("android.hardware.input.InputManager");
+                Method m = clazz.getMethod("getInstance");
+                InputManagerObj = m.invoke(null);
+                injectInputEvent = clazz.getMethod("injectInputEvent", android.view.InputEvent.class, int.class);
+            } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+                e.printStackTrace();
+                InputManagerObj = null;
+                injectInputEvent = null;
+            }
+        }
+        public void invoke( android.view.InputEvent event, int id) {
+            if (injectInputEvent == null || InputManagerObj == null) {
+                return;
+            }
+            try {
+                injectInputEvent.invoke(InputManagerObj, event, id);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    final private InjectInputEventCaller injectInputEvent = new InjectInputEventCaller();
     /**
      * Builds a MotionEvent and injects it into the event stream.
      *
@@ -125,14 +159,45 @@ public class MainActivity extends AppCompatActivity {
                 DEFAULT_EDGE_FLAGS);
         event.setSource(inputSource);
         Log.i(TAG, "injectMotionEvent: " + event);
-        try {
-            Class clazz = ClassLoader.getSystemClassLoader().loadClass("android.hardware.input.InputManager");
-            Method m = clazz.getMethod("getInstance");
-            Object InputManagerObj = m.invoke(null);
-            Method injectInputEvent = clazz.getMethod("injectInputEvent", android.view.InputEvent.class, int.class);
-            injectInputEvent.invoke(InputManagerObj, event, 2);
-        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            e.printStackTrace();
+        injectInputEvent.invoke(event, 2);
+    }
+
+    float initialX, initialY;
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        //mGestureDetector.onTouchEvent(event);
+
+        int action = event.getActionMasked();
+
+        switch (action) {
+
+            case MotionEvent.ACTION_DOWN:
+                initialX = event.getX();
+                initialY = event.getY();
+                Log.d(TAG, String.format("Action was DOWN at (%f,%f)", initialX, initialY));
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                float midX = event.getX();
+                float midY = event.getY();
+                //Log.d(TAG, String.format("Action was MOVE at (%f,%f)", midX, midY));
+                break;
+
+            case MotionEvent.ACTION_UP:
+                float finalX = event.getX();
+                float finalY = event.getY();
+                Log.d(TAG, String.format("Action was UP   at (%f,%f)", finalX, finalY));
+                break;
+
+            case MotionEvent.ACTION_CANCEL:
+                Log.d(TAG,"Action was CANCEL");
+                break;
+
+            case MotionEvent.ACTION_OUTSIDE:
+                Log.d(TAG, "Movement occurred outside bounds of current screen element");
+                break;
         }
+
+        return super.onTouchEvent(event);
     }
 }
