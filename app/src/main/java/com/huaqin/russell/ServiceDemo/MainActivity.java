@@ -2,6 +2,8 @@ package com.huaqin.russell.ServiceDemo;
 
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.Layout;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.MotionEvent;
@@ -18,6 +20,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import java.util.Random;
+
+import static java.lang.Math.min;
+import static java.lang.Math.max;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "ServiceDemo";
@@ -42,32 +47,79 @@ public class MainActivity extends AppCompatActivity {
 
         // Example of a call to a native method
         TextView tv = (TextView) findViewById(R.id.sample_text);
-        tv.setText("Have to say something");
+        tv.setMovementMethod(new ScrollingMovementMethod());
+        tv.setText("Hello Service Demo");
+
         mRunThread = new Thread(new Runnable() {
             public void run() {
+
+                DisplayFromBackgroundThread(null);
+
                 Random r = new Random();
                 long startTime = SystemClock.elapsedRealtime();
+
                 for (;;) {
                     double v = (r.nextGaussian() * 16000 + 40000);
-                    if (v <= 10) {
-                        v = 10;
-                    } else if (v > 200000) {
-                        v = 200000;
+                    v = max(v, 10.0f);
+                    v = min(v, 80000.0f);
+                    int x1, y1, x2, y2;
+                    boolean forward = (long)v % 4 >=  1;
+                    if (forward) {
+                        x1 = 600;
+                        y1 = 600;
+                        x2 = 200;
+                        y2 = 200;
+                    } else {
+                        x1 = 200;
+                        y1 = 200;
+                        x2 = 600;
+                        y2 = 600;
+
                     }
-                    sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, 600, 600, 20, 200, 300);
-                    Log.d(TAG, String.format("delay time %f", v));
-                    SystemClock.sleep((long)v*5);
+                    sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, x1, y1, x2, y2,300);
+                    String msg = String.format("delay time %f, %s", v, forward ? "forward" : "backward");
+                    Log.i(TAG, msg);
+                    DisplayFromBackgroundThread(msg);
+                    SystemClock.sleep((long)v);
                     long current = SystemClock.elapsedRealtime();
                     if (current - startTime > 90L * 60 * 1000) { // 1.5 hours
                         break;
                     }
                 }
 
+                DisplayFromBackgroundThread("Finished");
+                Log.i(TAG, "Finished");
+
             }
         });
         mRunThread.start();
     }
 
+    private String text = "";
+    public void DisplayFromBackgroundThread(final String str)
+    {
+        runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+                if (str == null) {
+                    text = "";
+                } else {
+                    text += str + "\n";
+                }
+                TextView tv = (TextView) findViewById(R.id.sample_text);
+                tv.setText(text);
+                final Layout layout = tv.getLayout();
+                if (layout != null) {
+                    int scrollDelta = layout.getLineBottom(tv.getLineCount() - 1)
+                            - tv.getScrollY() - tv.getHeight();
+                    if (scrollDelta > 0)
+                        tv.scrollBy(0, scrollDelta);
+                }
+
+            }
+        });
+    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -165,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
                 DEFAULT_META_STATE, DEFAULT_PRECISION_X, DEFAULT_PRECISION_Y, DEFAULT_DEVICE_ID,
                 DEFAULT_EDGE_FLAGS);
         event.setSource(inputSource);
-        Log.i(TAG, "injectMotionEvent: " + event);
+        Log.d(TAG, "injectMotionEvent: " + event);
         injectInputEvent.invoke(event, 2);
     }
 
@@ -187,7 +239,7 @@ public class MainActivity extends AppCompatActivity {
             case MotionEvent.ACTION_MOVE:
                 float midX = event.getX();
                 float midY = event.getY();
-                //Log.d(TAG, String.format("Action was MOVE at (%f,%f)", midX, midY));
+                Log.v(TAG, String.format("Action was MOVE at (%f,%f)", midX, midY));
                 break;
 
             case MotionEvent.ACTION_UP:
