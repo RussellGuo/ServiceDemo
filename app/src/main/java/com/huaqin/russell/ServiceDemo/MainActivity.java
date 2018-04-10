@@ -185,14 +185,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         public void invoke( android.view.InputEvent event, int id) {
-            if (injectInputEvent == null || InputManagerObj == null) {
-                return;
-            }
-            try {
-                injectInputEvent.invoke(InputManagerObj, event, id);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
+            return; // in pseudo-mode, action does not emit.
         }
     }
     final private InjectInputEventCaller injectInputEvent = new InjectInputEventCaller();
