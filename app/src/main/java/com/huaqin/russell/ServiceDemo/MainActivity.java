@@ -90,6 +90,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int GetRunningTimeFromMenuItem(int id, int minutes) {
+        if (mMenu == null) {
+            return 0;
+        }
         MenuItem item = mMenu.findItem(id);
         if (item == null) {
             return 0;
@@ -103,6 +106,9 @@ public class MainActivity extends AppCompatActivity {
         v += GetRunningTimeFromMenuItem(R.id.action_60min , 60);
         v += GetRunningTimeFromMenuItem(R.id.action_90min , 90);
         v += GetRunningTimeFromMenuItem(R.id.action_120min, 120);
+        if (v == 0) {
+            v = 1;
+        }
         return v;
     }
     private String text = "";
