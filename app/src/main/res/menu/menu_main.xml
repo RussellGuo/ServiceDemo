@@ -2,9 +2,33 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.huaqin.russell.ServiceDemo.MainActivity">
-    <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/action_settings"
-        app:showAsAction="never" />
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/action_15min"
+            android:orderInCategory="100"
+            android:title="@string/action_015min"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_30min"
+            android:orderInCategory="100"
+            android:title="@string/action_030min"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_60min"
+            android:checked="true"
+            android:orderInCategory="100"
+            android:title="@string/action_060min"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_90min"
+            android:orderInCategory="100"
+            android:title="@string/action_090min"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_120min"
+            android:orderInCategory="100"
+            android:title="@string/action_120min"
+            app:showAsAction="never" />
+    </group>
 </menu>

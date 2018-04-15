@@ -28,25 +28,16 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "ServiceDemo";
 
     private Thread mRunThread = null;
+    Menu mMenu = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-
-        // Example of a call to a native method
-        TextView tv = (TextView) findViewById(R.id.sample_text);
+        TextView tv = findViewById(R.id.sample_text);
         tv.setMovementMethod(new ScrollingMovementMethod());
         tv.setText("Hello Service Demo");
 
@@ -58,12 +49,12 @@ public class MainActivity extends AppCompatActivity {
                 Random r = new Random();
                 long startTime = SystemClock.elapsedRealtime();
 
-                for (;;) {
+                for (; ; ) {
                     double v = (r.nextGaussian() * 16000 + 40000);
                     v = max(v, 10.0f);
                     v = min(v, 80000.0f);
                     int x1, y1, x2, y2;
-                    boolean forward = (long)v % 4 >=  1;
+                    boolean forward = (long) v % 4 >= 1;
                     if (forward) {
                         x1 = 600;
                         y1 = 600;
@@ -76,15 +67,18 @@ public class MainActivity extends AppCompatActivity {
                         y2 = 600;
 
                     }
-                    sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, x1, y1, x2, y2,300);
-                    String msg = String.format("delay time %f, %s", v, forward ? "forward" : "backward");
-                    Log.i(TAG, msg);
-                    DisplayFromBackgroundThread(msg);
-                    SystemClock.sleep((long)v);
+                    sendSwipe(InputDevice.SOURCE_TOUCHSCREEN, x1, y1, x2, y2, 300);
+
                     long current = SystemClock.elapsedRealtime();
-                    if (current - startTime > 90L * 60 * 1000) { // 1.5 hours
+                    long left = startTime + GetRunningTimeFromUI() * 60 * 1000 - current;
+                    if (left <= 0) {
                         break;
                     }
+                    String msg = String.format("delay time %.1f, %s, %d seconds left", v / 1000, forward ? "forward" : "backward", left / 1000);
+                    Log.i(TAG, msg);
+                    DisplayFromBackgroundThread(msg);
+
+                    SystemClock.sleep((long) v);
                 }
 
                 DisplayFromBackgroundThread("Finished");
@@ -95,9 +89,25 @@ public class MainActivity extends AppCompatActivity {
         mRunThread.start();
     }
 
+    private int GetRunningTimeFromMenuItem(int id, int minutes) {
+        MenuItem item = mMenu.findItem(id);
+        if (item == null) {
+            return 0;
+        }
+        return item.isChecked() ? minutes :0;
+    }
+    int GetRunningTimeFromUI() {
+        int v = 0;
+        v += GetRunningTimeFromMenuItem(R.id.action_15min , 15);
+        v += GetRunningTimeFromMenuItem(R.id.action_30min , 30);
+        v += GetRunningTimeFromMenuItem(R.id.action_60min , 60);
+        v += GetRunningTimeFromMenuItem(R.id.action_90min , 90);
+        v += GetRunningTimeFromMenuItem(R.id.action_120min, 120);
+        return v;
+    }
     private String text = "";
-    public void DisplayFromBackgroundThread(final String str)
-    {
+
+    public void DisplayFromBackgroundThread(final String str) {
         runOnUiThread(new Runnable() {
 
             @Override
@@ -107,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     text += str + "\n";
                 }
-                TextView tv = (TextView) findViewById(R.id.sample_text);
+                TextView tv = findViewById(R.id.sample_text);
                 tv.setText(text);
                 final Layout layout = tv.getLayout();
                 if (layout != null) {
@@ -120,27 +130,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        mMenu = menu;
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
+        item.setChecked(true);
         return super.onOptionsItemSelected(item);
     }
+
     private void sendTap(int inputSource, float x, float y) {
         long now = SystemClock.uptimeMillis();
         injectMotionEvent(inputSource, MotionEvent.ACTION_DOWN, now, x, y, 1.0f);
@@ -172,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
     class InjectInputEventCaller {
         private Object InputManagerObj = null;
         private Method injectInputEvent = null;
+
         InjectInputEventCaller() {
             try {
                 Class clazz = ClassLoader.getSystemClassLoader().loadClass("android.hardware.input.InputManager");
@@ -184,7 +189,8 @@ public class MainActivity extends AppCompatActivity {
                 injectInputEvent = null;
             }
         }
-        public void invoke( android.view.InputEvent event, int id) {
+
+        public void invoke(android.view.InputEvent event, int id) {
             if (injectInputEvent == null || InputManagerObj == null) {
                 return;
             }
@@ -195,16 +201,18 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     final private InjectInputEventCaller injectInputEvent = new InjectInputEventCaller();
+
     /**
      * Builds a MotionEvent and injects it into the event stream.
      *
      * @param inputSource the InputDevice.SOURCE_* sending the input event
-     * @param action the MotionEvent.ACTION_* for the event
-     * @param when the value of SystemClock.uptimeMillis() at which the event happened
-     * @param x x coordinate of event
-     * @param y y coordinate of event
-     * @param pressure pressure of event
+     * @param action      the MotionEvent.ACTION_* for the event
+     * @param when        the value of SystemClock.uptimeMillis() at which the event happened
+     * @param x           x coordinate of event
+     * @param y           y coordinate of event
+     * @param pressure    pressure of event
      */
     private void injectMotionEvent(int inputSource, int action, long when, float x, float y, float pressure) {
         final float DEFAULT_SIZE = 1.0f;
