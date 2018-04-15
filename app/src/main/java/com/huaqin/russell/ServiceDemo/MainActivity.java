@@ -220,43 +220,4 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "injectMotionEvent: " + event);
         injectInputEvent.invoke(event, 2);
     }
-
-    float initialX, initialY;
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        //mGestureDetector.onTouchEvent(event);
-
-        int action = event.getActionMasked();
-
-        switch (action) {
-
-            case MotionEvent.ACTION_DOWN:
-                initialX = event.getX();
-                initialY = event.getY();
-                Log.d(TAG, String.format("Action was DOWN at (%f,%f)", initialX, initialY));
-                break;
-
-            case MotionEvent.ACTION_MOVE:
-                float midX = event.getX();
-                float midY = event.getY();
-                Log.v(TAG, String.format("Action was MOVE at (%f,%f)", midX, midY));
-                break;
-
-            case MotionEvent.ACTION_UP:
-                float finalX = event.getX();
-                float finalY = event.getY();
-                Log.d(TAG, String.format("Action was UP   at (%f,%f)", finalX, finalY));
-                break;
-
-            case MotionEvent.ACTION_CANCEL:
-                Log.d(TAG,"Action was CANCEL");
-                break;
-
-            case MotionEvent.ACTION_OUTSIDE:
-                Log.d(TAG, "Movement occurred outside bounds of current screen element");
-                break;
-        }
-
-        return super.onTouchEvent(event);
-    }
 }
