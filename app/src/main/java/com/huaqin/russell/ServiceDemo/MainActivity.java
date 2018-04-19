@@ -7,12 +7,11 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -23,12 +22,19 @@ import java.util.Random;
 
 import static java.lang.Math.min;
 import static java.lang.Math.max;
+import static java.lang.Thread.sleep;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "ServiceDemo";
 
     private Thread mRunThread = null;
     Menu mMenu = null;
+    Button mButton = null;
+
+    private void SetupButton() {
+        String ButtonText = mRunThread == null ? "Start" : "Stop";
+        mButton.setText(ButtonText);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +46,23 @@ public class MainActivity extends AppCompatActivity {
         TextView tv = findViewById(R.id.sample_text);
         tv.setMovementMethod(new ScrollingMovementMethod());
         tv.setText("Hello Service Demo");
+        mButton = findViewById(R.id.start_stop_button);
+        mButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (mRunThread == null) {
+                    StartBackgroundTask();
+                } else {
+                    StopBackgroundTask();
+                }
+                SetupButton();
+            }
+        });
+        SetupButton();
 
+    }
+
+    private void StartBackgroundTask() {
         mRunThread = new Thread(new Runnable() {
             public void run() {
 
@@ -78,7 +100,13 @@ public class MainActivity extends AppCompatActivity {
                     Log.i(TAG, msg);
                     DisplayFromBackgroundThread(msg);
 
-                    SystemClock.sleep((long) v);
+                    try {
+                        sleep((long)v);
+                        //SystemClock.sleep(0);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+
                 }
 
                 DisplayFromBackgroundThread("Finished");
@@ -89,6 +117,15 @@ public class MainActivity extends AppCompatActivity {
         mRunThread.start();
     }
 
+    private void StopBackgroundTask() {
+        mRunThread.interrupt();
+        try {
+            mRunThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        mRunThread = null;
+    }
     private int GetRunningTimeFromMenuItem(int id, int minutes) {
         if (mMenu == null) {
             return 0;
