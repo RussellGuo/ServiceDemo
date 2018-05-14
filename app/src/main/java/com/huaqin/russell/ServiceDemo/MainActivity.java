@@ -94,9 +94,17 @@ public class MainActivity extends AppCompatActivity {
                     long current = SystemClock.elapsedRealtime();
                     long left = startTime + GetRunningTimeFromUI() * 60 * 1000 - current;
                     if (left <= 0) {
+                        // timeout, emulate button pressed
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                StopBackgroundTask();
+                                SetupButton();
+                            }
+                        });
                         break;
                     }
-                    String msg = String.format("delay time %.1f, %s, %d seconds left", v / 1000, forward ? "forward" : "backward", left / 1000);
+                    String msg = String.format("delay %.1f seconds, %s, %.1f minutes left", v / 1000, forward ? "forward" : "backward", left / 1000/60.0f);
                     Log.i(TAG, msg);
                     DisplayFromBackgroundThread(msg);
 
